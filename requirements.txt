@@ -1,10 +1,15 @@
 # --- For-Bot-Working -------- #
 pyrofork==2.3.48
+wpyrogram==2.0.148
+pyromod==1.5
+pyroblack==2.5.0
+pyrogram==2.0.106
 TgCrypto
-# --- For-Database ----------- #
+python-dotenv
 pymongo
 dnspython
-# --- For-Web-Response ------- #
 aiohttp
-# --- For-Timer -------------- #
 humanize
+pillow
+asyncio
+motor
