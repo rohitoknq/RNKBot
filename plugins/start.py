@@ -117,7 +117,7 @@ def force_sub(func):
             await msg.edit_text("<code>Cᴏɴɴᴇᴄᴛɪɴɢ!!</code>")
             await msg.edit_text("<code>Cᴏɴɴᴇᴄᴛɪɴɢ!!!</code>")
             logger.debug(f"Loaded spoiler: {SPOILER}")
-            await msg.edit_text("<code>Cᴏɴɴᴇᴄᴛɪɴɢ!!!</code>")
+            await msg.edit_text("<code>Cᴏɴɴᴇᴄᴛɪɴɢ!!!!</code>")
             logger.info(f"User {user_id} invoked {message.command[0]} command")
             await msg.edit_text("<code>Lᴏᴀᴅɪɴɢ!</code>")
             statuses = await check_subscription(client, user_id)
