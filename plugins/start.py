@@ -154,7 +154,7 @@ def force_sub(func):
                 if len(from_link) > 1:
                     try_again_link = f"https://t.me/{client.username}/?start={from_link[1]}"
                     buttons.append(InlineKeyboardButton("Tʀʏ Aɢᴀɪɴ!", url=try_again_link))
-                await msg.edit_text("<code>Lᴏᴀᴅɪɴɢ!!!</code>")
+                await msg.edit_text("<code>Lᴏᴀᴅɪɴɢ!!!!</code>")
                 channels_message = (
                     "<blockquote><b>Cʜᴀɴɴᴇʟs Sᴛᴀᴛᴜs:</b></blockquote>\n" +
                     "\n".join(f"<b>{i+1}. {name}</b>\n<b>Sᴛᴀᴛᴜs:</b> <code>{userstatus}</code>\n" for i, (name, userstatus) in enumerate(channels_list))
