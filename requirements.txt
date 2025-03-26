@@ -1,5 +1,5 @@
 # --- For-Bot-Working -------- #
-pyrogram==2.0.80
+pyrofork==2.3.48
 TgCrypto
 # --- For-Database ----------- #
 pymongo
