@@ -38,7 +38,7 @@ if OWNER_ID not in SUDO:
     SUDO.append(OWNER_ID)
 
 # Port
-PORT = os.environ.get("PORT", "")
+PORT = os.environ.get("PORT", "8000")
 
 # Database
 DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://nitinkumardhundhara:DARKXSIDE78@cluster0.wdive.mongodb.net/?retryWrites=true&w=majority")
