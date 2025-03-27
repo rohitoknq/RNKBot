@@ -470,15 +470,15 @@ async def start_command(client: Client, message: Message):
         reply_markup = InlineKeyboardMarkup(
             [
                 [
-                [
-                    InlineKeyboardButton("「ᴍᴀɪɴ ʜᴜʙ」", url = "t.me/genanimeofc"),
-                ],
-                    InlineKeyboardButton("「Hɪɴᴅɪ Aɴɪᴍᴇ", url = "t.me/Crunchyroll_Anime_India"),
-                    InlineKeyboardButton("Mᴀɴɢᴀ」", url = "t.me/Crunchyroll_Anime_India")
+                    InlineKeyboardButton("「ᴍᴀɪɴ ʜᴜʙ」", url="t.me/genanimeofc"),
                 ],
                 [
-                    InlineKeyboardButton("🛈 ᴀʙᴏᴜᴛ", callback_data = "about"),
-                    InlineKeyboardButton("✘ ᴄʟᴏsᴇ", callback_data = "close")
+                    InlineKeyboardButton("「Hɪɴᴅɪ Aɴɪᴍᴇ」", url="t.me/Crunchyroll_Anime_India"),
+                    InlineKeyboardButton("「Mᴀɴɢᴀ」", url="t.me/Crunchyroll_Anime_India")
+                ],
+                [
+                    InlineKeyboardButton("🛈 ᴀʙᴏᴜᴛ", callback_data="about"),
+                    InlineKeyboardButton("✘ ᴄʟᴏsᴇ", callback_data="close")
                 ]
             ]
         )
@@ -504,15 +504,15 @@ async def start_command(client: Client, message: Message):
         reply_markup = InlineKeyboardMarkup(
             [
                 [
-                [
-                    InlineKeyboardButton("「ᴍᴀɪɴ ʜᴜʙ」", url = "t.me/genanimeofc"),
-                ],
-                    InlineKeyboardButton("「Hɪɴᴅɪ Aɴɪᴍᴇ", url = "t.me/Crunchyroll_Anime_India"),
-                    InlineKeyboardButton("Mᴀɴɢᴀ」", url = "t.me/Crunchyroll_Anime_India")
+                    InlineKeyboardButton("「ᴍᴀɪɴ ʜᴜʙ」", url="t.me/genanimeofc"),
                 ],
                 [
-                    InlineKeyboardButton("🛈 ᴀʙᴏᴜᴛ", callback_data = "about"),
-                    InlineKeyboardButton("✘ ᴄʟᴏsᴇ", callback_data = "close")
+                    InlineKeyboardButton("「Hɪɴᴅɪ Aɴɪᴍᴇ」", url="t.me/Crunchyroll_Anime_India"),
+                    InlineKeyboardButton("「Mᴀɴɢᴀ」", url="t.me/Crunchyroll_Anime_India")
+                ],
+                [
+                    InlineKeyboardButton("🛈 ᴀʙᴏᴜᴛ", callback_data="about"),
+                    InlineKeyboardButton("✘ ᴄʟᴏsᴇ", callback_data="close")
                 ]
             ]
         )
