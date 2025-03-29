@@ -244,6 +244,15 @@ def add_admin(user_id):
         logger.error(f"❌ Failed to add admin: {e}")
         return False
 
+async def get_admin_ids():
+    """Get admin IDs as integers"""
+    try:
+        admins = await get_admins()  # Use existing get_admins() function
+        return [int(admin_id) for admin_id in admins]
+    except Exception as e:
+        logger.error(f"Error getting admin IDs: {e}")
+        return []
+
 def remove_admin(user_id):
     """Remove admin"""
     try:
