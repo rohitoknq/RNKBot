@@ -15,6 +15,8 @@ user_data = database['users']
 banuser_data = database['bannedusers']
 settings_collection = database['settings']
 fsubs_collection = database['forcesubs']
+join_requests = database['join_requests']
+request_channels = database['request_channels']
 
 # Default values for settings and force subscriptions
 default_settings = settings
@@ -68,22 +70,52 @@ def del_fsub(channel_id):
     except Exception as e:
         logger.error(f"Error deleting force subscription {channel_id}: {e}")
 
-def add_fsub(channel_id, channel_name, is_private=False, auto_accept=False):
+def add_fsub(channel_id, channel_name, is_private=False, auto_accept=False, request_channel=None):
     """Adds a channel to the fsubs collection with additional parameters"""
     try:
-        if not fsubs_collection.find_one({'_id': channel_id}):
+        existing = fsubs_collection.find_one({'_id': channel_id})
+        if not existing:
             fsubs_collection.insert_one({
                 '_id': channel_id,
                 'CHANNEL_NAME': channel_name,
                 'is_private': is_private,
                 'auto_accept': auto_accept,
-                'request_channel': None  # To store request channel ID if needed
+                'request_channel': request_channel
             })
-            logger.info(f"Added force subscription for channel {channel_name} (ID: {channel_id}).")
+            logger.info(f"Added force subscription: {channel_name}")
+            return True
         else:
-            logger.info(f"Channel {channel_name} (ID: {channel_id}) is already in the fsubs list.")
+            fsubs_collection.update_one(
+                {'_id': channel_id},
+                {'$set': {
+                    'is_private': is_private,
+                    'auto_accept': auto_accept,
+                    'request_channel': request_channel
+                }}
+            )
+            logger.info(f"Updated force subscription: {channel_name}")
+            return True
     except Exception as e:
-        logger.error(f"Error adding force subscription for channel {channel_id}: {e}")
+        logger.error(f"Error adding force sub: {e}")
+        return False
+
+
+def get_channel_settings(channel_id):
+    return fsubs_collection.find_one({'_id': channel_id})
+
+def log_join_request(user_id, channel_id, approved=False):
+    join_requests.update_one(
+        {'user_id': user_id, 'channel_id': channel_id},
+        {'$set': {'approved': approved, 'timestamp': datetime.now()}},
+        upsert=True
+    )
+
+def has_approved_request(user_id, channel_id):
+    return bool(join_requests.find_one({
+        'user_id': user_id,
+        'channel_id': channel_id,
+        'approved': True
+    }))
 
 # -----Settings-DB----- # 
 def load_settings():
