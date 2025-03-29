@@ -8,7 +8,7 @@ from config import *
 from database.database import *
 from pyrogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
 from helper_func import encode, decode, get_messages
-
+from pyrogram.enums import ChatMemberStatus
 
 # Basic logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -89,17 +89,13 @@ async def check_subscription(client, user_id):
                     # Auto-approved channel
                     statuses[channel_id] = ChatMemberStatus.MEMBER
                 else:
-                    # Check pending requests
-                    try:
-                        requests = await client.get_chat_join_requests(
-                            chat_id=channel_id,
-                            user_id=user_id
-                        )
-                        # Allow access if pending request exists
-                        statuses[channel_id] = ChatMemberStatus.MEMBER if requests else ChatMemberStatus.BANNED
-                    except ChatAdminRequired:
-                        logger.error(f"Bot needs admin in {channel_id} to check requests")
-                        statuses[channel_id] = ChatMemberStatus.BANNED
+                    # Allow access if ANY request exists (approved or pending)
+                    request_exists = join_requests.find_one({
+                        'user_id': user_id,
+                        'channel_id': channel_id,
+                        'approved': {'$ne': False}  # True or not set
+                    })
+                    statuses[channel_id] = ChatMemberStatus.MEMBER if request_exists else ChatMemberStatus.BANNED
             else:
                 # Public channel check
                 member = await client.get_chat_member(channel_id, user_id)
@@ -109,7 +105,7 @@ async def check_subscription(client, user_id):
             statuses[channel_id] = ChatMemberStatus.BANNED
         except Exception as e:
             logger.error(f"Subscription check error: {e}")
-            statuses[channel_id] = None
+            statuses[channel_id] = ChatMemberStatus.BANNED  # Fail-safe
 
     return statuses
 
@@ -369,30 +365,36 @@ async def channel_post(client: Client, message: Message):
 
 
 @Bot.on_callback_query(filters.regex(r"^auto_(yes|no)$"))
-async def set_approval_type(client, query):
+async def handle_auto_approve_choice(client, query):
     user_id = query.from_user.id
     action = query.data.split("_")[1]
     
     if user_id not in current_operation:
-        await query.answer("Session expired!")
+        await query.answer("Operation expired!")
         return
     
     data = current_operation[user_id]
     channel_id = data["channel_id"]
     channel_name = data["channel_name"]
     
-    # Save settings
-    add_fsub(
-        channel_id=channel_id,
-        channel_name=channel_name,
-        is_private=True,
-        auto_accept=(action == "yes")
-    )
+    if action == "yes":
+        add_fsub(
+            channel_id=channel_id,
+            channel_name=channel_name,
+            is_private=True,
+            auto_accept=True
+        )
+        msg = "🤖 Auto-approve enabled! Users will be approved instantly."
+    else:
+        add_fsub(
+            channel_id=channel_id,
+            channel_name=channel_name,
+            is_private=True,
+            auto_accept=False
+        )
+        msg = "📝 Manual approval enabled! Users can use bot while requests are pending."
     
-    await query.edit_message_text(
-        f"Settings saved for {channel_name}:\n"
-        f"Auto-approve: {'✅ Enabled' if action == 'yes' else '❌ Disabled'}"
-    )
+    await query.edit_message_text(f"✅ {channel_name} settings saved!\n{msg}")
     del current_operation[user_id]
 
 @Bot.on_message(filters.command('start') & filters.private)
