@@ -26,18 +26,6 @@ settings_collection = database['settings']
 channels_collection = database['channels']
 requests_collection = database['join_requests']
 
-# Create indexes
-try:
-    requests_collection.create_index(
-        [("user_id", 1), ("channel_id", 1)], 
-        unique=True,
-        name="user_channel_idx"
-    )
-    channels_collection.create_index("_id", unique=True)
-    logger.info("✅ Database indexes created")
-except Exception as e:
-    logger.error(f"❌ Index creation failed: {e}")
-
 def initialize_defaults():
     """Initialize default configurations"""
     try:
@@ -62,6 +50,30 @@ def initialize_defaults():
     except Exception as e:
         logger.error(f"❌ Initialization failed: {e}")
 
+# Index Management
+def create_indexes():
+    """Create required database indexes"""
+    try:
+        # Handle existing index
+        existing_indexes = requests_collection.index_information()
+        if 'user_id_1_channel_id_1' in existing_indexes:
+            requests_collection.drop_index('user_id_1_channel_id_1')
+        
+        requests_collection.create_index(
+            [("user_id", 1), ("channel_id", 1)], 
+            unique=True,
+            name="user_channel_idx"
+        )
+        channels_collection.create_index("_id", unique=True)
+        logger.info("✅ Database indexes created")
+    except pymongo.errors.OperationFailure as e:
+        if "IndexOptionsConflict" in str(e):
+            logger.warning("⚠️ Index already exists, skipping creation")
+        else:
+            logger.error(f"❌ Index creation failed: {e}")
+    except Exception as e:
+        logger.error(f"❌ Index setup error: {e}")
+
 # Channel Management
 def add_channel(channel_id, name, is_private=False, auto_approve=False, request_channel=None):
     """Add/update a force subscription channel"""
@@ -83,85 +95,6 @@ def add_channel(channel_id, name, is_private=False, auto_approve=False, request_
         logger.error(f"❌ Failed to update channel: {e}")
         return False
 
-def remove_channel(channel_id):
-    """Remove a force subscription channel"""
-    try:
-        result = channels_collection.delete_one({"_id": channel_id})
-        if result.deleted_count > 0:
-            logger.info(f"🗑️ Channel {channel_id} removed")
-            return True
-        logger.warning(f"⚠️ Channel {channel_id} not found")
-        return False
-    except Exception as e:
-        logger.error(f"❌ Failed to remove channel: {e}")
-        return False
-
-def get_channel(channel_id):
-    """Get channel configuration"""
-    try:
-        return channels_collection.find_one({"_id": channel_id})
-    except Exception as e:
-        logger.error(f"❌ Failed to get channel: {e}")
-        return None
-
-def get_all_channels():
-    """Get all force subscription channels"""
-    try:
-        return list(channels_collection.find())
-    except Exception as e:
-        logger.error(f"❌ Failed to get channels: {e}")
-        return []
-
-# Join Request Management
-def create_request(user_id, channel_id):
-    """Create new join request"""
-    try:
-        result = requests_collection.update_one(
-            {"user_id": user_id, "channel_id": channel_id},
-            {"$setOnInsert": {
-                "status": "pending",
-                "created_at": datetime.now(),
-                "updated_at": datetime.now()
-            }},
-            upsert=True
-        )
-        return result.upserted_id is not None
-    except Exception as e:
-        logger.error(f"❌ Failed to create request: {e}")
-        return False
-
-def update_request(user_id, channel_id, status):
-    """Update request status"""
-    valid_statuses = ["approved", "rejected", "pending"]
-    if status not in valid_statuses:
-        logger.error(f"❌ Invalid status: {status}")
-        return False
-        
-    try:
-        result = requests_collection.update_one(
-            {"user_id": user_id, "channel_id": channel_id},
-            {"$set": {
-                "status": status,
-                "updated_at": datetime.now()
-            }}
-        )
-        return result.modified_count > 0
-    except Exception as e:
-        logger.error(f"❌ Failed to update request: {e}")
-        return False
-
-def get_request_status(user_id, channel_id):
-    """Get current request status"""
-    try:
-        doc = requests_collection.find_one(
-            {"user_id": user_id, "channel_id": channel_id},
-            {"status": 1}
-        )
-        return doc.get("status", "none") if doc else "none"
-    except Exception as e:
-        logger.error(f"❌ Failed to get request status: {e}")
-        return "error"
-
 # User Management
 def add_user(user_id):
     """Add new user to database"""
@@ -179,42 +112,23 @@ def add_user(user_id):
         logger.error(f"❌ Failed to add user: {e}")
         return False
 
-def get_user(user_id):
-    """Get user document"""
-    try:
-        return users_collection.find_one({"_id": user_id})
-    except Exception as e:
-        logger.error(f"❌ Failed to get user: {e}")
-        return None
-
-def update_user_activity(user_id):
-    """Update user's last active time"""
-    try:
-        users_collection.update_one(
-            {"_id": user_id},
-            {"$set": {"last_active": datetime.now()}}
-        )
-        return True
-    except Exception as e:
-        logger.error(f"❌ Failed to update user activity: {e}")
-        return False
-
 # Ban Management
-def ban_user(user_id):
+def add_ban(user_id):
     """Add user to ban list"""
     try:
-        banned_users_collection.insert_one({
-            "_id": user_id,
-            "banned_at": datetime.now()
-        })
+        banned_users_collection.update_one(
+            {"_id": user_id},
+            {"$setOnInsert": {
+                "banned_at": datetime.now()
+            }},
+            upsert=True
+        )
         return True
-    except pymongo.errors.DuplicateKeyError:
-        return True  # Already banned
     except Exception as e:
         logger.error(f"❌ Failed to ban user: {e}")
         return False
 
-def unban_user(user_id):
+def remove_ban(user_id):
     """Remove user from ban list"""
     try:
         result = banned_users_collection.delete_one({"_id": user_id})
@@ -223,50 +137,9 @@ def unban_user(user_id):
         logger.error(f"❌ Failed to unban user: {e}")
         return False
 
-def is_banned(user_id):
-    """Check if user is banned"""
-    try:
-        return bool(banned_users_collection.find_one({"_id": user_id}))
-    except Exception as e:
-        logger.error(f"❌ Failed to check ban status: {e}")
-        return False
-
 # Admin Management
-def add_admin(user_id):
-    """Add new admin"""
-    try:
-        settings_collection.update_one(
-            {"_id": 1},
-            {"$addToSet": {"admins": user_id}}
-        )
-        return True
-    except Exception as e:
-        logger.error(f"❌ Failed to add admin: {e}")
-        return False
-
-async def get_admin_ids():
-    """Get admin IDs as integers"""
-    try:
-        admins = await get_admins()  # Use existing get_admins() function
-        return [int(admin_id) for admin_id in admins]
-    except Exception as e:
-        logger.error(f"Error getting admin IDs: {e}")
-        return []
-
-def remove_admin(user_id):
-    """Remove admin"""
-    try:
-        settings_collection.update_one(
-            {"_id": 1},
-            {"$pull": {"admins": user_id}}
-        )
-        return True
-    except Exception as e:
-        logger.error(f"❌ Failed to remove admin: {e}")
-        return False
-
-def get_admins():
-    """Get list of admins"""
+async def get_admins():
+    """Get admin list"""
     try:
         doc = settings_collection.find_one({"_id": 1})
         return doc.get("admins", []) if doc else []
@@ -274,5 +147,37 @@ def get_admins():
         logger.error(f"❌ Failed to get admins: {e}")
         return []
 
-# Initialize database on import
+async def get_admin_ids():
+    """Get admin IDs as integers"""
+    try:
+        admins = await get_admins()
+        return [int(admin_id) for admin_id in admins]
+    except Exception as e:
+        logger.error(f"❌ Failed to get admin IDs: {e}")
+        return []
+
+# Spoiler Management
+def edit_spoiler(value):
+    """Update spoiler setting"""
+    try:
+        settings_collection.update_one(
+            {"_id": 1},
+            {"$set": {"SPOILER": value}}
+        )
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to update spoiler: {e}")
+        return False
+
+def get_spoiler():
+    """Get current spoiler setting"""
+    try:
+        doc = settings_collection.find_one({"_id": 1})
+        return doc.get("SPOILER", False) if doc else False
+    except Exception as e:
+        logger.error(f"❌ Failed to get spoiler: {e}")
+        return False
+
+# Initialize database
 initialize_defaults()
+create_indexes()
