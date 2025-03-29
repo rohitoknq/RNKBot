@@ -68,11 +68,17 @@ def del_fsub(channel_id):
     except Exception as e:
         logger.error(f"Error deleting force subscription {channel_id}: {e}")
 
-def add_fsub(channel_id, channel_name):
-    """Adds a channel to the fsubs collection if not already present."""
+def add_fsub(channel_id, channel_name, is_private=False, auto_accept=False):
+    """Adds a channel to the fsubs collection with additional parameters"""
     try:
         if not fsubs_collection.find_one({'_id': channel_id}):
-            fsubs_collection.insert_one({'_id': channel_id, 'CHANNEL_NAME': channel_name})
+            fsubs_collection.insert_one({
+                '_id': channel_id,
+                'CHANNEL_NAME': channel_name,
+                'is_private': is_private,
+                'auto_accept': auto_accept,
+                'request_channel': None  # To store request channel ID if needed
+            })
             logger.info(f"Added force subscription for channel {channel_name} (ID: {channel_id}).")
         else:
             logger.info(f"Channel {channel_name} (ID: {channel_id}) is already in the fsubs list.")
