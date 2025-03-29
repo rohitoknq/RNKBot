@@ -264,142 +264,108 @@ async def channel_post(client: Client, message: Message):
     
     if user_id in ban_ids:
         await client.send_message(chat_id=user_id, text="Yᴏᴜ ʜᴀᴠᴇ ʙᴇᴇɴ ʙᴀɴɴᴇᴅ ғʀᴏᴍ ᴜsɪɴɢ ᴛʜᴇ ʙᴏᴛ.")
-
     elif user_id in admin_ids:
-        # Check if the user has an active operation
         if user_id in current_operation:
             action = current_operation[user_id]["action"]
             step = current_operation[user_id]["step"]
             
-            # Process for /add_fsub
             if action == "add_fsub":
                 if step == "awaiting_channel_id":
                     try:
-                        # Convert the input to an integer for the channel ID
                         channel_id = int(message.text)
-    
-                        # Check if the bot is an admin in the channel
                         bot_user = await client.get_me()
                         bot_status = await client.get_chat_member(channel_id, bot_user.id)
-    
+                        
                         if bot_status.status in {ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER}:
-                            # Store the channel ID temporarily and move to the next step
-                            current_operation[user_id]["channel_id"] = channel_id
-                            current_operation[user_id]["step"] = "awaiting_channel_name"
+                            current_operation[user_id].update({
+                                "channel_id": channel_id,
+                                "step": "awaiting_channel_name"
+                            })
                             await message.reply("Nᴀᴍᴇ ᴏғ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ?")
                         else:
                             await message.reply("Tʜᴇ ʙᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜɪs ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴀᴅᴅ ɪᴛ ᴛᴏ ᴛʜᴇ ғsᴜʙ ʟɪsᴛ.")
-                            del current_operation[user_id]  # Clear the user's operation
-                            return
-    
+                            del current_operation[user_id]
                     except ValueError:
                         await message.reply("Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ɪɴᴛᴇɢᴇʀ ғᴏʀ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.")
                 
-    elif step == "awaiting_channel_name":
-        channel_id = current_operation[user_id]["channel_id"]
-        channel_name = message.text
-    
-    # Check if channel is private
-        try:
-            chat = await client.get_chat(channel_id)
-            is_private = chat.has_protected_content
-        except:
-            is_private = False
-
-        if is_private:
-            current_operation[user_id].update({
-                "step": "set_auto_approve",
-                "channel_name": channel_name,
-                "is_private": True
-            })
-        
-            await message.reply(
-                "Eɴᴀʙʟᴇ ᴀᴜᴛᴏ-ᴀᴘᴘʀᴏᴠᴇ ғᴏʀ ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛs?",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🤖 Aᴜᴛᴏ Aᴘᴘʀᴏᴠᴇ", callback_data="auto_yes"),
-                    InlineKeyboardButton("📝 Mᴀɴᴜᴀʟ Rᴇǫᴜᴇsᴛ", callback_data="auto_no")]
-                ])
-            )
-        else:
-            add_fsub(channel_id, channel_name)
-            await message.reply(f"Aᴅᴅᴇᴅ ᴘᴜʙʟɪᴄ ᴄʜᴀɴɴᴇʟ:{channel_name}")
-            del current_operation[user_id]
+                elif step == "awaiting_channel_name":
+                    channel_id = current_operation[user_id]["channel_id"]
+                    channel_name = message.text
                     
-                    # Process for /rm_fsub
+                    try:
+                        chat = await client.get_chat(channel_id)
+                        is_private = chat.has_protected_content
+                    except:
+                        is_private = False
+
+                    if is_private:
+                        current_operation[user_id].update({
+                            "step": "set_auto_approve",
+                            "channel_name": channel_name,
+                            "is_private": True
+                        })
+                        await message.reply(
+                            "Eɴᴀʙʟᴇ ᴀᴜᴛᴏ-ᴀᴘᴘʀᴏᴠᴇ ғᴏʀ ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛs?",
+                            reply_markup=InlineKeyboardMarkup([
+                                [InlineKeyboardButton("🤖 Aᴜᴛᴏ Aᴘᴘʀᴏᴠᴇ", callback_data="auto_yes"),
+                                 InlineKeyboardButton("📝 Mᴀɴᴜᴀʟ Rᴇǫᴜᴇsᴛ", callback_data="auto_no")]
+                            ])
+                        )
+                    else:
+                        add_fsub(channel_id, channel_name)
+                        await message.reply(f"Aᴅᴅᴇᴅ ᴘᴜʙʟɪᴄ ᴄʜᴀɴɴᴇʟ: {channel_name}")
+                        del current_operation[user_id]
+
             elif action == "rm_fsub" and step == "awaiting_channel_id":
                 try:
-                    # Convert the input to an integer for the channel ID
                     channel_id = int(message.text)
-                    
-                    # Check if the channel ID exists in FSUBS
                     if channel_id in channel_ids:
-                        # Remove the channel from the dictionary
-                        #del FSUBS[channel_id]
                         del_fsub(channel_id)
-                        await message.reply(f"Cʜᴀɴɴᴇʟ (ID: {channel_id}) ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ ғʀᴏᴍ ᴛʜᴇ ғsᴜʙ ʟɪsᴛ.")
+                        await message.reply(f"Cʜᴀɴɴᴇʟ (ID: {channel_id}) ʀᴇᴍᴏᴠᴇᴅ ғʀᴏᴍ ғsᴜʙ ʟɪsᴛ.")
                     else:
-                        await message.reply("Tʜᴇ ғsᴜʙ ʟɪsᴛ ᴅᴏᴇs ɴᴏᴛ ᴄᴏɴᴛᴀɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ ID.")
-                    
-                    # Clear the user's operation
+                        await message.reply("Tʜɪs ᴄʜᴀɴɴᴇʟ ɪs ɴᴏᴛ ɪɴ ғsᴜʙ ʟɪsᴛ.")
                     del current_operation[user_id]
-                
                 except ValueError:
                     await message.reply("Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ɪɴᴛᴇɢᴇʀ ғᴏʀ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.")
-                    
+        
         elif user_id in waiting_for_image:
             try:
                 img_type = waiting_for_image[user_id]
+                image_path = "plugins/image/start.jpg" if img_type == "start" else "plugins/image/fsub.jpg"
                 
-                # Determine the correct file path based on the image type
-                if img_type == "start":
-                    image_path = "plugins/image/start.jpg"
-                elif img_type == "fsub":
-                    image_path = "plugins/image/fsub.jpg"
-                
-                # Delete existing image if it exists
                 if os.path.exists(image_path):
                     os.remove(image_path)
-        
-                # Download the new image
-                file_path = await client.download_media(message.photo, file_name="temp_image.jpg")
-        
-                # Check if the file was successfully downloaded
-                if file_path:
-                    os.rename(file_path, image_path)  # Rename downloaded file
-                    await message.reply("Iᴍᴀɢᴇ ʀᴇᴄᴇɪᴠᴇᴅ, sᴀᴠᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!", quote=True)
-                else:
-                    await message.reply("Fᴀɪʟᴇᴅ ᴛᴏ sᴀᴠᴇ ᴛʜᴇ ɪᴍᴀɢᴇ. Pʟᴇᴀsᴇ ᴛʀʏ ᴀɢᴀɪɴ.", quote=True)
                 
-                # Remove user from waiting list
+                file_path = await client.download_media(message.photo, file_name="temp_image.jpg")
+                
+                if file_path:
+                    os.rename(file_path, image_path)
+                    await message.reply("Iᴍᴀɢᴇ sᴀᴠᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!", quote=True)
+                else:
+                    await message.reply("Fᴀɪʟᴇᴅ ᴛᴏ sᴀᴠᴇ ɪᴍᴀɢᴇ. Tʀʏ ᴀɢᴀɪɴ.", quote=True)
+                
                 del waiting_for_image[user_id]
             except:
-                # If the user sends a photo without a prompt
-                await message.reply("Pʟᴇᴀsᴇ ᴜsᴇ ᴛʜᴇ /s_img ᴏʀ /f_img ᴄᴏᴍᴍᴀɴᴅ ғɪʀsᴛ ᴛᴏ sᴇᴛ ᴀɴ ɪᴍᴀɢᴇ.")
+                await message.reply("Pʟᴇᴀsᴇ ᴜsᴇ /s_img ᴏʀ /f_img ᴄᴏᴍᴍᴀɴᴅ ғɪʀsᴛ!")
         
-            
-
         else:
-            reply_text = await message.reply_text("Pʟᴇᴀsᴇ Wᴀɪᴛ...!", quote = True)
+            reply_text = await message.reply_text("Pʟᴇᴀsᴇ Wᴀɪᴛ...!", quote=True)
             try:
-                post_message = await message.copy(chat_id = client.db_channel.id, disable_notification=True)
+                post_message = await message.copy(chat_id=client.db_channel.id, disable_notification=True)
+                converted_id = post_message.id
+                base64_string = await encode(str(converted_id))
+                link = f"https://t.me/{client.username}?start=filez{base64_string}"
+                
+                reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Sʜᴀʀᴇ URL", url=f'https://telegram.me/share/url?url={link}')]])
+                await reply_text.edit(f"<b>Hᴇʀᴇ ɪs ʏᴏᴜʀ ʟɪɴᴋ</b>\n\n{link}", reply_markup=reply_markup, disable_web_page_preview=True)
+                
+                if not DISABLE_CHANNEL_BUTTON:
+                    await post_message.edit_reply_markup(reply_markup)
             except FloodWait as e:
                 await asyncio.sleep(e.x)
-                post_message = await message.copy(chat_id = client.db_channel.id, disable_notification=True)
+                post_message = await message.copy(chat_id=client.db_channel.id, disable_notification=True)
             except Exception as e:
-                print(e)
-                await reply_text.edit_text("Sᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ Wʀᴏɴɢ..!")
-                return
-            converted_id = post_message.id
-            string = f"{converted_id}"
-            base64_string = await encode(string)
-            link = f"https://t.me/{client.username}?start=filez{base64_string}"
-        
-            reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Sʜᴀʀᴇ URL", url=f'https://telegram.me/share/url?url={link}')]])
-        
-            await reply_text.edit(f"<b>Hᴇʀᴇ ɪs ʏᴏᴜʀ ʟɪɴᴋ</b>\n\n{link}", reply_markup=reply_markup, disable_web_page_preview = True)
-        
-            if not DISABLE_CHANNEL_BUTTON:
-                await post_message.edit_reply_markup(reply_markup)
+                await reply_text.edit_text(f"Sᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ Wʀᴏɴɢ: {e}")
 
 
 @Bot.on_callback_query(filters.regex(r"^auto_(yes|no)$"))
