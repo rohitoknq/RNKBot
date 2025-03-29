@@ -1,5 +1,3 @@
-#(©)Yugen_Bots
-
 import base64
 import re
 import asyncio
@@ -8,12 +6,6 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ChatMemberStatus
 from config import *
 from pyrogram.errors import UserNotParticipant, Forbidden, PeerIdInvalid, ChatAdminRequired
-
-# Set up basic logging configuration
-
-
-
-
         
 async def encode(string):
     string_bytes = string.encode("ascii")
