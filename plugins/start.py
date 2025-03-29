@@ -75,37 +75,43 @@ async def get_invite_link(channel_id):
 
 
 async def check_subscription(client, user_id):
-    """Check if a user is subscribed or has pending request"""
+    """Check if user is subscribed or has pending request"""
     fsubs = load_fsubs()
-    results = {}
+    statuses = {}
     
     for channel in fsubs:
         channel_id = channel['_id']
-        is_private = channel.get('is_private', False)
-        auto_accept = channel.get('auto_accept', False)
-        request_channel = channel.get('request_channel')
+        settings = get_channel_settings(channel_id)
         
         try:
-            # For public channels
-            if not is_private:
-                member = await client.get_chat_member(channel_id, user_id)
-                results[channel_id] = member.status
-            # For private channels with auto-accept
-            elif auto_accept:
-                results[channel_id] = ChatMemberStatus.MEMBER  # Assume approved
-            else:
-                # Check join requests in request channel
-                if request_channel:
-                    requests = await client.get_chat_join_requests(request_channel, user_id=user_id)
-                    results[channel_id] = ChatMemberStatus.MEMBER if requests else ChatMemberStatus.BANNED
+            if settings.get('is_private'):
+                if settings.get('auto_accept'):
+                    # Auto-approved channel
+                    statuses[channel_id] = ChatMemberStatus.MEMBER
                 else:
-                    results[channel_id] = ChatMemberStatus.BANNED
-        
+                    # Check pending requests
+                    try:
+                        requests = await client.get_chat_join_requests(
+                            chat_id=channel_id,
+                            user_id=user_id
+                        )
+                        # Allow access if pending request exists
+                        statuses[channel_id] = ChatMemberStatus.MEMBER if requests else ChatMemberStatus.BANNED
+                    except ChatAdminRequired:
+                        logger.error(f"Bot needs admin in {channel_id} to check requests")
+                        statuses[channel_id] = ChatMemberStatus.BANNED
+            else:
+                # Public channel check
+                member = await client.get_chat_member(channel_id, user_id)
+                statuses[channel_id] = member.status
+                
+        except UserNotParticipant:
+            statuses[channel_id] = ChatMemberStatus.BANNED
         except Exception as e:
-            logger.error(f"Error checking channel {channel_id}: {e}")
-            results[channel_id] = None
-    
-    return results
+            logger.error(f"Subscription check error: {e}")
+            statuses[channel_id] = None
+
+    return statuses
 
 def is_user_subscribed(statuses):
     """Determine if the user is subscribed based on their statuses."""
@@ -289,36 +295,35 @@ async def channel_post(client: Client, message: Message):
                     except ValueError:
                         await message.reply("Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ɪɴᴛᴇɢᴇʀ ғᴏʀ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.")
                 
-                elif step == "awaiting_channel_name":
-                    channel_id = current_operation[user_id]["channel_id"]
-                    channel_name = message.text
+    elif step == "awaiting_channel_name":
+        channel_id = current_operation[user_id]["channel_id"]
+        channel_name = message.text
     
     # Check if channel is private
-                    try:
-                        chat = await client.get_chat(channel_id)
-                        is_private = chat.has_protected_content if chat else False
-                    except:
-                        is_private = False
-    
-                    if is_private:
-        # Store temp data and ask for auto-accept preference
-                        current_operation[user_id].update({
-                            "channel_name": channel_name,
-                            "is_private": True,
-                            "step": "awaiting_auto_accept"
-                        })
+        try:
+            chat = await client.get_chat(channel_id)
+            is_private = chat.has_protected_content
+        except:
+            is_private = False
+
+        if is_private:
+            current_operation[user_id].update({
+                "step": "set_auto_approve",
+                "channel_name": channel_name,
+                "is_private": True
+            })
         
-                        await message.reply(
-                            "Sʜᴏᴜʟᴅ I ᴀᴜᴛᴏ-ᴀᴄᴄᴇᴘᴛ ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛs ғᴏʀ ᴛʜɪs ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟ?",
-                            reply_markup=InlineKeyboardMarkup([
-                                [InlineKeyboardButton("Yᴇs", callback_data="auto_accept_yes"),
-                                InlineKeyboardButton("Nᴏ", callback_data="auto_accept_no")]
-                            ])
-                        )
-                    else:
-                        add_fsub(channel_id, channel_name)
-                        await message.reply(f"Cʜᴀɴɴᴇʟ '{channel_name}' ᴀᴅᴅᴇᴅ ᴛᴏ ғᴏʀᴄᴇ sᴜʙsᴄʀɪᴘᴛɪᴏɴ ʟɪsᴛ!")
-                        del current_operation[user_id]
+            await message.reply(
+                "Eɴᴀʙʟᴇ ᴀᴜᴛᴏ-ᴀᴘᴘʀᴏᴠᴇ ғᴏʀ ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛs?",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🤖 Aᴜᴛᴏ Aᴘᴘʀᴏᴠᴇ", callback_data="auto_yes"),
+                    InlineKeyboardButton("📝 Mᴀɴᴜᴀʟ Rᴇǫᴜᴇsᴛ", callback_data="auto_no")]
+                ])
+            )
+        else:
+            add_fsub(channel_id, channel_name)
+            await message.reply(f"Aᴅᴅᴇᴅ ᴘᴜʙʟɪᴄ ᴄʜᴀɴɴᴇʟ:{channel_name}")
+            del current_operation[user_id]
                     
                     # Process for /rm_fsub
             elif action == "rm_fsub" and step == "awaiting_channel_id":
@@ -397,40 +402,32 @@ async def channel_post(client: Client, message: Message):
                 await post_message.edit_reply_markup(reply_markup)
 
 
-@Bot.on_callback_query(filters.regex("^auto_accept_"))
-async def handle_auto_accept(client, query):
+@Bot.on_callback_query(filters.regex(r"^auto_(yes|no)$"))
+async def set_approval_type(client, query):
     user_id = query.from_user.id
-    data = query.data.split("_")[2]
+    action = query.data.split("_")[1]
     
-    if user_id in current_operation:
-        channel_data = current_operation[user_id]
-        channel_id = channel_data["channel_id"]
-        channel_name = channel_data["channel_name"]
-        
-        auto_accept = True if data == "yes" else False
-        request_channel = None
-        
-        if not auto_accept:
-            await query.message.edit_text("Pʟᴇᴀsᴇ ғᴏʀᴡᴀʀᴅ ᴀ ᴍᴇssᴀɢᴇ ғʀᴏᴍ ᴛʜᴇ ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛ ᴄʜᴀɴɴᴇʟ:")
-            current_operation[user_id]["step"] = "awaiting_request_channel"
-            return
-        
-        # Add to database with auto-accept setting
-        add_fsub(
-            channel_id=channel_id,
-            channel_name=channel_name,
-            is_private=True,
-            auto_accept=auto_accept
-        )
-        
-        await query.message.edit_text(
-            f"Cʜᴀɴɴᴇʟ '{channel_name}' ᴀᴅᴅᴇᴅ ᴡɪᴛʜ {'auto-accept' if auto_accept else 'manual'} ᴀᴘᴘʀᴏᴠᴀʟ!"
-        )
-        del current_operation[user_id]
-        
-        
-
-
+    if user_id not in current_operation:
+        await query.answer("Session expired!")
+        return
+    
+    data = current_operation[user_id]
+    channel_id = data["channel_id"]
+    channel_name = data["channel_name"]
+    
+    # Save settings
+    add_fsub(
+        channel_id=channel_id,
+        channel_name=channel_name,
+        is_private=True,
+        auto_accept=(action == "yes")
+    )
+    
+    await query.edit_message_text(
+        f"Settings saved for {channel_name}:\n"
+        f"Auto-approve: {'✅ Enabled' if action == 'yes' else '❌ Disabled'}"
+    )
+    del current_operation[user_id]
 
 @Bot.on_message(filters.command('start') & filters.private)
 @force_sub
@@ -528,7 +525,7 @@ async def start_command(client: Client, message: Message):
         reply_markup = InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton("「ᴍᴀɪɴ ʜᴜʙ」", url="t.me/genanimeofc"),
+                    InlineKeyboardButton("「Mᴀɪɴ Hᴜʙ」", url="t.me/genanimeofc"),
                 ],
                 [
                     InlineKeyboardButton("「Hɪɴᴅɪ Aɴɪᴍᴇ」", url="t.me/Crunchyroll_Anime_India"),
