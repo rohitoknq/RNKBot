@@ -75,27 +75,37 @@ async def get_invite_link(channel_id):
 
 
 async def check_subscription(client, user_id):
-    """Check if a user is subscribed to all required channels."""
-    statuses = {}
+    """Check if a user is subscribed or has pending request"""
     fsubs = load_fsubs()
-    channel_ids = [fsub['_id'] for fsub in fsubs if isinstance(fsub, dict)]  # Type check added
-
-    for channel_id in channel_ids:
+    results = {}
+    
+    for channel in fsubs:
+        channel_id = channel['_id']
+        is_private = channel.get('is_private', False)
+        auto_accept = channel.get('auto_accept', False)
+        request_channel = channel.get('request_channel')
+        
         try:
-            user = await client.get_chat_member(channel_id, user_id)
-            statuses[channel_id] = user.status
-            logger.info(f"User {user_id} status in channel {channel_id}: {user.status}")
-        except UserNotParticipant:
-            statuses[channel_id] = ChatMemberStatus.BANNED
-            logger.info(f"User {user_id} is not a participant of channel {channel_id}.")
-        except Forbidden:
-            logger.error(f"Bot does not have permission to access channel {channel_id}.")
-            statuses[channel_id] = None
+            # For public channels
+            if not is_private:
+                member = await client.get_chat_member(channel_id, user_id)
+                results[channel_id] = member.status
+            # For private channels with auto-accept
+            elif auto_accept:
+                results[channel_id] = ChatMemberStatus.MEMBER  # Assume approved
+            else:
+                # Check join requests in request channel
+                if request_channel:
+                    requests = await client.get_chat_join_requests(request_channel, user_id=user_id)
+                    results[channel_id] = ChatMemberStatus.MEMBER if requests else ChatMemberStatus.BANNED
+                else:
+                    results[channel_id] = ChatMemberStatus.BANNED
+        
         except Exception as e:
-            logger.error(f"Error checking subscription status for user {user_id} in channel {channel_id}: {e}")
-            statuses[channel_id] = None
-
-    return statuses
+            logger.error(f"Error checking channel {channel_id}: {e}")
+            results[channel_id] = None
+    
+    return results
 
 def is_user_subscribed(statuses):
     """Determine if the user is subscribed based on their statuses."""
@@ -280,19 +290,35 @@ async def channel_post(client: Client, message: Message):
                         await message.reply("Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ɪɴᴛᴇɢᴇʀ ғᴏʀ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.")
                 
                 elif step == "awaiting_channel_name":
-                    # Retrieve the channel ID and set the channel name
                     channel_id = current_operation[user_id]["channel_id"]
                     channel_name = message.text
-                    
-                    # Add the channel ID and name to the FSUBS dictionary
-                    #FSUBS[channel_id] = channel_name
-                    add_fsub(channel_id, channel_name)
-                    
-                    # Confirm to the user
-                    await message.reply(f"Cʜᴀɴɴᴇʟ '{channel_name}' (ID: {channel_id}) ʜᴀs ʙᴇᴇɴ ᴀᴅᴅᴇᴅ ᴛᴏ ᴛʜᴇ ғsᴜʙ ʟɪsᴛ.")
-                    
-                    # Clear the user's operation
-                    del current_operation[user_id]
+    
+    # Check if channel is private
+                    try:
+                        chat = await client.get_chat(channel_id)
+                        is_private = chat.has_protected_content if chat else False
+                    except:
+                        is_private = False
+    
+                    if is_private:
+        # Store temp data and ask for auto-accept preference
+                        current_operation[user_id].update({
+                            "channel_name": channel_name,
+                            "is_private": True,
+                            "step": "awaiting_auto_accept"
+                        })
+        
+                        await message.reply(
+                            "Sʜᴏᴜʟᴅ I ᴀᴜᴛᴏ-ᴀᴄᴄᴇᴘᴛ ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛs ғᴏʀ ᴛʜɪs ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟ?",
+                            reply_markup=InlineKeyboardMarkup([
+                                [InlineKeyboardButton("Yᴇs", callback_data="auto_accept_yes"),
+                                InlineKeyboardButton("Nᴏ", callback_data="auto_accept_no")]
+                            ])
+                        )
+                    else:
+                        add_fsub(channel_id, channel_name)
+                        await message.reply(f"Cʜᴀɴɴᴇʟ '{channel_name}' ᴀᴅᴅᴇᴅ ᴛᴏ ғᴏʀᴄᴇ sᴜʙsᴄʀɪᴘᴛɪᴏɴ ʟɪsᴛ!")
+                        del current_operation[user_id]
                     
                     # Process for /rm_fsub
             elif action == "rm_fsub" and step == "awaiting_channel_id":
@@ -369,6 +395,38 @@ async def channel_post(client: Client, message: Message):
         
             if not DISABLE_CHANNEL_BUTTON:
                 await post_message.edit_reply_markup(reply_markup)
+
+
+@Bot.on_callback_query(filters.regex("^auto_accept_"))
+async def handle_auto_accept(client, query):
+    user_id = query.from_user.id
+    data = query.data.split("_")[2]
+    
+    if user_id in current_operation:
+        channel_data = current_operation[user_id]
+        channel_id = channel_data["channel_id"]
+        channel_name = channel_data["channel_name"]
+        
+        auto_accept = True if data == "yes" else False
+        request_channel = None
+        
+        if not auto_accept:
+            await query.message.edit_text("Pʟᴇᴀsᴇ ғᴏʀᴡᴀʀᴅ ᴀ ᴍᴇssᴀɢᴇ ғʀᴏᴍ ᴛʜᴇ ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛ ᴄʜᴀɴɴᴇʟ:")
+            current_operation[user_id]["step"] = "awaiting_request_channel"
+            return
+        
+        # Add to database with auto-accept setting
+        add_fsub(
+            channel_id=channel_id,
+            channel_name=channel_name,
+            is_private=True,
+            auto_accept=auto_accept
+        )
+        
+        await query.message.edit_text(
+            f"Cʜᴀɴɴᴇʟ '{channel_name}' ᴀᴅᴅᴇᴅ ᴡɪᴛʜ {'auto-accept' if auto_accept else 'manual'} ᴀᴘᴘʀᴏᴠᴀʟ!"
+        )
+        del current_operation[user_id]
         
         
 
