@@ -4,8 +4,8 @@ from database.database import (
     get_channel_settings,
     log_join_request,
     has_approved_request,
-    add_bot_admin,
-    remove_bot_admin
+    update_join_request,
+    get_admin_ids
 )
 from bot import Bot
 import logging
@@ -14,10 +14,12 @@ from config import ADMINS
 logger = logging.getLogger(__name__)
 
 async def is_admin(user_id: int):
+    """Check if user is admin"""
     return user_id in ADMINS or user_id in await get_admin_ids()
 
 @Bot.on_chat_join_request(filters.channel)
 async def handle_join_request(client: Bot, join_request: ChatJoinRequest):
+    """Handle new join requests and grant temporary access"""
     user_id = join_request.from_user.id
     channel_id = join_request.chat.id
     channel_settings = get_channel_settings(channel_id)
@@ -26,20 +28,22 @@ async def handle_join_request(client: Bot, join_request: ChatJoinRequest):
         return
     
     try:
-        # Auto-approve handling
+        # Always log the request first
+        log_join_request(user_id, channel_id, approved=False)
+        
         if channel_settings.get('auto_accept'):
+            # Auto-approve if enabled
             await client.approve_chat_join_request(channel_id, user_id)
-            log_join_request(user_id, channel_id, approved=True)
+            update_join_request(user_id, channel_id, approved=True)
             await client.send_message(
                 user_id,
-                f"✅ **Auto-approved!**\nYou can now access {join_request.chat.title}!"
+                f"✅ **Instant Access Granted!**\n"
+                f"You've been automatically approved for {join_request.chat.title}!"
             )
         else:
-            # Log pending request
-            log_join_request(user_id, channel_id, approved=False)
-            
-            # Send request to admin channel
-            if channel_settings.get('request_channel'):
+            # Notify request channel if exists
+            request_channel = channel_settings.get('request_channel')
+            if request_channel:
                 keyboard = InlineKeyboardMarkup([
                     [
                         InlineKeyboardButton("✅ Approve", 
@@ -50,20 +54,25 @@ async def handle_join_request(client: Bot, join_request: ChatJoinRequest):
                 ])
                 
                 await client.send_message(
-                    channel_settings['request_channel'],
+                    request_channel,
                     f"📥 New join request from [{user_id}](tg://user?id={user_id})\n"
-                    f"Channel: {join_request.chat.title}\n"
-                    f"User: {join_request.from_user.mention}",
+                    f"**Channel:** {join_request.chat.title}\n"
+                    f"**User:** {join_request.from_user.mention}",
                     reply_markup=keyboard
                 )
-                
-            # Notify user
+            
+            # Notify user about temporary access
             await client.send_message(
                 user_id,
-                "⌛ **Request Received!**\n"
-                "You can use the bot while we review your request!"
+                "⏳ **Request Received!**\n"
+                "You can use the bot while we review your request!\n\n"
+                "Status: __Pending Review__",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔄 Check Status", 
+                        callback_data=f"status_{channel_id}")]
+                ])
             )
-            
+
     except Exception as e:
         logger.error(f"Join request error: {e}")
         await client.send_message(
@@ -71,60 +80,65 @@ async def handle_join_request(client: Bot, join_request: ChatJoinRequest):
             "⚠️ An error occurred processing your request. Please try again later."
         )
 
-@Bot.on_callback_query(filters.regex(r"^approve_|^deny_"))
-async def handle_approval(client: Bot, query: CallbackQuery):
-    if not await is_admin(query.from_user.id):
-        await query.answer("You're not authorized!", show_alert=True)
+@Bot.on_callback_query(filters.regex(r"^approve_|^deny_|^status_"))
+async def handle_join_callbacks(client: Bot, query: CallbackQuery):
+    """Handle all join request related callbacks"""
+    user_id = query.from_user.id
+    data = query.data.split("_")
+    
+    if data[0] in ("approve", "deny") and not await is_admin(user_id):
+        await query.answer("❌ You're not authorized!", show_alert=True)
         return
         
-    data = query.data.split("_")
+    if data[0] == "status":
+        # User checking request status
+        channel_id = int(data[1])
+        status = "Approved" if has_approved_request(query.from_user.id, channel_id) else "Pending"
+        
+        await query.answer(
+            f"Current Status: {status}",
+            show_alert=True
+        )
+        return
+    
+    # Handle approval/denial
     action = data[0]
-    user_id = int(data[1])
+    target_user = int(data[1])
     channel_id = int(data[2])
     
     try:
         if action == "approve":
-            # Approve request
-            await client.approve_chat_join_request(channel_id, user_id)
-            log_join_request(user_id, channel_id, approved=True)
+            await client.approve_chat_join_request(channel_id, target_user)
+            update_join_request(target_user, channel_id, approved=True)
             
-            # Update user
             await client.send_message(
-                user_id,
+                target_user,
                 f"🎉 **Request Approved!**\n"
-                f"You now have access to all features!"
+                f"You now have full access to {query.message.chat.title}!"
             )
             
-            # Update admin message
             await query.message.edit_text(
                 f"✅ Approved by {query.from_user.mention}",
                 reply_markup=None
             )
             
-        else:
-            # Deny request
-            await client.decline_chat_join_request(channel_id, user_id)
-            log_join_request(user_id, channel_id, approved=False)
+        elif action == "deny":
+            await client.decline_chat_join_request(channel_id, target_user)
+            update_join_request(target_user, channel_id, approved=False)
             
-            # Update admin message
+            await client.send_message(
+                target_user,
+                f"⚠️ **Request Denied**\n"
+                f"Access to {query.message.chat.title} was not approved."
+            )
+            
             await query.message.edit_text(
                 f"❌ Denied by {query.from_user.mention}",
                 reply_markup=None
             )
             
-            # Notify user
-            await client.send_message(
-                user_id,
-                "⚠️ **Request Denied**\n"
-                "Contact admins for more information."
-            )
-            
+        await query.answer("Action processed!")
+        
     except Exception as e:
-        logger.error(f"Approval error: {e}")
+        logger.error(f"Callback error: {e}")
         await query.answer("Failed to process request!", show_alert=True)
-
-# Add this in database.py
-"""
-async def get_admin_ids():
-    return [int(admin_id) for admin_id in (await get_admins())]
-"""
