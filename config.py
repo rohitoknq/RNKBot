@@ -5,10 +5,10 @@ from logging.handlers import RotatingFileHandler
 settings = {
     '_id': 1,  # don't change this line only, if you do you're dying by my hand
     "SPOILER": False,  # bool write True or False
-    "FILE_AUTO_DELETE": 3600,  # in seconds
+    "FILE_AUTO_DELETE": 600,  # in seconds
     "AUTO_DEL": True,  # bool write True or False
-    "STICKER_ID": "CAACAgUAAyEFAASC9ig8AAITN2fiTzX7IuQLs0iys6Hv2yqk3e2EAAJOEQADrcFXrtN9uQUFGsw2BA",
-    "stk_del_timer": 1, # in seconds
+    "STICKER_ID": "CAACAgUAAyEFAASUwGgHAAIS-mgI_buDCtillVa_5WUxbaIzkO6jAAIUAgACaoQ8NozqxwvIcaGdNgQ",
+    "stk_del_timer": 5, # in seconds
     "bot_admin": [7086472788] #e.g. 1963929292,38739292827 differetiate admins with a comma
 }
 
@@ -16,7 +16,7 @@ HELP_MSG = """help msg
 """  # shown only to admins
 
 # Bot token @Botfather
-TG_BOT_TOKEN = '7899125538:AAGKiE12AG0xlfhShDlsGGuqnckSLMsOt9Y'
+TG_BOT_TOKEN = '7696888023:AAEI5zizXTD1xq7xAnwTYC7iET8wOnja4xI'
 # Your API ID from my.telegram.org
 APP_ID = int(os.environ.get("APP_ID", "28744454"))
 
@@ -24,7 +24,7 @@ APP_ID = int(os.environ.get("APP_ID", "28744454"))
 API_HASH = os.environ.get("API_HASH", "debd37cef0ad1a1ce45d0be8e8c3c5e7")
 
 # Your db channel Id
-DB_CHANNEL_ID = os.environ.get("CHANNEL_ID", "@BatchBotLog")
+DB_CHANNEL_ID = os.environ.get("CHANNEL_ID", "-1002415067779")
 
 # NAME OF OWNER
 OWNER = os.environ.get("OWNER", "𝗘𝗥𝗔 『𝗗𝗔𝗥𝗞𝗫𝗦𝗜𝗗𝗘』 ♪")
@@ -42,18 +42,18 @@ PORT = os.environ.get("PORT", "8000")
 
 # Database
 DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://nitinkumardhundhara:DARKXSIDE78@cluster0.wdive.mongodb.net/?retryWrites=true&w=majority")
-DB_NAME = os.environ.get("DATABASE_NAME", "HindiBot")
+DB_NAME = os.environ.get("DATABASE_NAME", "RNK")
 
 # FSUBS configuration
 FSUBS = [
-    {'_id': -1002252808006, "CHANNEL_NAME": "Crunchyroll Anime India"}
+    {'_id': -1002513795136, "CHANNEL_NAME": "𝘙𝘕𝘒 𝘈𝘕𝘐𝘔𝘌"}
 ]
 
+START_MSG = os.environ.get("START_MESSAGE","<blockquote><b>ʙᴀᴋᴀ!!! </b><b>{mention}</b>\n<b>ɪ ᴀᴍ <a href='https://t.me/TheNamiRobot'>ɴᴀᴍɪ</a>, ᴀ ꜰɪʟᴇ ꜱᴛᴏʀᴇ ʙᴏᴛ ᴄʀᴇᴀᴛᴇᴅ ʙʏ </b><b><a href='https://t.me/AnimeMonth'>𝘈𝘯𝘪𝘮𝘦𝘔𝘰𝘯𝘵𝘩</a> ᴛᴏ ꜱʜᴀʀᴇ ᴀɴɪᴍᴇ ᴛᴏ ᴀ ʟᴀʀɢᴇ ɴᴜᴍʙᴇʀ </b><b>ᴏꜰ ꜰᴀɴꜱ ᴠɪᴀ ꜱᴘᴇᴄɪᴀʟ ʟɪɴᴋꜱ...</blockquote>\n</b><blockquote><b>🇵​🇴​🇼​🇪​🇷​🇪​🇩​ 🇧​🇾​ <a href='https://t.me/RNK_Anime'>RNK Anime</a></b></blockquote>")
 
 TG_BOT_WORKERS = int(os.environ.get("TG_BOT_WORKERS", "4"))
 
 # Start message
-START_MSG = os.environ.get("START_MESSAGE", "<blockquote>ʙᴀᴋᴋᴀᴀᴀ!!! {mention}\n\nɪ ᴀᴍ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ, ɪ ᴄᴀɴ sᴛᴏʀᴇ ᴘʀɪᴠᴀᴛᴇ ғɪʟᴇs ɪɴ sᴘᴇᴄɪғɪᴇᴅ ᴄʜᴀɴɴᴇʟ ᴀɴᴅ ᴏᴛʜᴇʀ ᴜsᴇʀs ᴄᴀɴ ᴀᴄᴄᴇss ɪᴛ ғʀᴏᴍ sᴘᴇᴄɪᴀʟ ʟɪɴᴋ.</blockquote>")
 ADMINS = []
 # Add other admin IDs here as needed, ensuring not to include OWNER_ID
 other_admin_ids = []  # Replace with actual admin IDs
@@ -66,7 +66,7 @@ if OWNER_ID not in ADMINS:
     ADMINS.append(OWNER_ID)
 
 # Set your Custom Caption here, Keep None for Disable Custom Caption
-CUSTOM_CAPTION = "<blockquote><b>{previouscaption}\n○  ʙʏ <a href='https://t.me/GenAnimeOfc'>GᴇɴAɴɪᴍᴇ</a></b></blockquote>"
+CUSTOM_CAPTION = None
 
 # Set True if you want to prevent users from forwarding files from the bot
 PROTECT_CONTENT = True if os.environ.get('PROTECT_CONTENT', "False") == "True" else False
@@ -75,7 +75,7 @@ PROTECT_CONTENT = True if os.environ.get('PROTECT_CONTENT', "False") == "True" e
 DISABLE_CHANNEL_BUTTON = True  # True or None
 
 BOT_STATS_TEXT = "<blockquote><b>BOT UPTIME</b>\n{uptime}</blockquote>"
-USER_REPLY_TEXT = "ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!"
+USER_REPLY_TEXT = "<blockquote><b>ɢɪᴠᴇ ᴍᴇ ᴏɴᴇ ʙɪʟʟɪᴏɴ ʙᴇʀʀɪᴇꜱ ᴀɴᴅ ɪ ᴡɪʟʟ ꜱᴛᴀʀᴛ ᴡᴏʀᴋɪɴɢ ꜰᴏʀ ʏᴏᴜ... ɴᴇxᴛ ᴏᴡɴᴇʀ</b></blockquote>"
 
 LOG_FILE_NAME = "filesharingbot.txt"
 
