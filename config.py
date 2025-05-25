@@ -16,7 +16,7 @@ HELP_MSG = """help msg
 """  # shown only to admins
 
 # Bot token @Botfather
-TG_BOT_TOKEN = '8001822796:AAGCi-NWCsRlDiM_1fmllhzhdFsHxDFethc'
+TG_BOT_TOKEN = '7615905046:AAFPBTZTYczzHKr8i9ODpxuZcgEEbRLhAtc'
 # Your API ID from my.telegram.org
 APP_ID = int(os.environ.get("APP_ID", "28744454"))
 
