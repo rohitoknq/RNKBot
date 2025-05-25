@@ -16,7 +16,7 @@ HELP_MSG = """help msg
 """  # shown only to admins
 
 # Bot token @Botfather
-TG_BOT_TOKEN = '7696888023:AAEI5zizXTD1xq7xAnwTYC7iET8wOnja4xI'
+TG_BOT_TOKEN = '8001822796:AAGCi-NWCsRlDiM_1fmllhzhdFsHxDFethc'
 # Your API ID from my.telegram.org
 APP_ID = int(os.environ.get("APP_ID", "28744454"))
 
@@ -24,13 +24,13 @@ APP_ID = int(os.environ.get("APP_ID", "28744454"))
 API_HASH = os.environ.get("API_HASH", "debd37cef0ad1a1ce45d0be8e8c3c5e7")
 
 # Your db channel Id
-DB_CHANNEL_ID = os.environ.get("CHANNEL_ID", "-1002415067779")
+DB_CHANNEL_ID = os.environ.get("CHANNEL_ID", "-1002590245086")
 
 # NAME OF OWNER
-OWNER = os.environ.get("OWNER", "𝗘𝗥𝗔 『𝗗𝗔𝗥𝗞𝗫𝗦𝗜𝗗𝗘』 ♪")
+OWNER = os.environ.get("OWNER", "ROHITREDDY69")
 
 # OWNER ID
-OWNER_ID = 7086472788
+OWNER_ID = 7845335174
 
 # SUDO: those who can edit admins in channel
 SUDO = []
@@ -46,10 +46,10 @@ DB_NAME = os.environ.get("DATABASE_NAME", "RNK")
 
 # FSUBS configuration
 FSUBS = [
-    {'_id': -1002513795136, "CHANNEL_NAME": "𝘙𝘕𝘒 𝘈𝘕𝘐𝘔𝘌"}
+    {'_id': -1002337660214, "CHANNEL_NAME": "KOI ANIMES"}
 ]
 
-START_MSG = os.environ.get("START_MESSAGE","<blockquote><b>ʙᴀᴋᴀ!!! </b><b>{mention}</b>\n<b>ɪ ᴀᴍ <a href='https://t.me/TheNamiRobot'>ɴᴀᴍɪ</a>, ᴀ ꜰɪʟᴇ ꜱᴛᴏʀᴇ ʙᴏᴛ ᴄʀᴇᴀᴛᴇᴅ ʙʏ </b><b><a href='https://t.me/AnimeMonth'>𝘈𝘯𝘪𝘮𝘦𝘔𝘰𝘯𝘵𝘩</a> ᴛᴏ ꜱʜᴀʀᴇ ᴀɴɪᴍᴇ ᴛᴏ ᴀ ʟᴀʀɢᴇ ɴᴜᴍʙᴇʀ </b><b>ᴏꜰ ꜰᴀɴꜱ ᴠɪᴀ ꜱᴘᴇᴄɪᴀʟ ʟɪɴᴋꜱ...</blockquote>\n</b><blockquote><b>🇵​🇴​🇼​🇪​🇷​🇪​🇩​ 🇧​🇾​ <a href='https://t.me/RNK_Anime'>RNK Anime</a></b></blockquote>")
+START_MSG = os.environ.get("START_MESSAGE","<blockquote><b>ʙᴀᴋᴀ!!! </b><b>{mention}</b>\n<b>ɪ ᴀᴍ <a href='https://t.me/koianimes'>ɴᴀᴍɪ</a>, ᴀ ꜰɪʟᴇ ꜱᴛᴏʀᴇ ʙᴏᴛ ᴄʀᴇᴀᴛᴇᴅ ʙʏ </b><b><a href='https://t.me/koianimes'>koianimes</a> ᴛᴏ ꜱʜᴀʀᴇ ᴀɴɪᴍᴇ ᴛᴏ ᴀ ʟᴀʀɢᴇ ɴᴜᴍʙᴇʀ </b><b>ᴏꜰ ꜰᴀɴꜱ ᴠɪᴀ ꜱᴘᴇᴄɪᴀʟ ʟɪɴᴋꜱ...</blockquote>\n</b><blockquote><b>🇵​🇴​🇼​🇪​🇷​🇪​🇩​ 🇧​🇾​ <a href='https://t.me/koianimes'>KOI ANIMES</a></b></blockquote>")
 
 TG_BOT_WORKERS = int(os.environ.get("TG_BOT_WORKERS", "4"))
 
